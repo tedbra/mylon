@@ -1,0 +1,288 @@
+{% extends "students/base.html" %}
+{% load static %}
+{% block content %}
+<div class="container" style="margin-top: 30px;">
+    <div class="btn-group" style="justify-content: space-between; align-items: center;">
+        <h1 style="font-family: 'Playfair Display'; color: var(--dark);">
+            {% if is_update %}Modify Student Profile
+            {% else %}Register New Student
+            {% endif %}
+        </h1>
+    </div>
+    {% if form.errors %}
+        <div style="background-color: #fef2f2; border: 1px solid #fca5a5; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+            <h4 style="color: #991b1b; margin-top: 0; margin-bottom: 8px; font-size: 1rem;">⚠️ Please correct the following compilation issues:</h4>
+            <ul style="color: #b91c1c; font-size: 0.9rem; margin-top: 0; padding-left: 20px;">
+                {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+                
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                    {% endfor %}
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+</div>
+
+<div class="container">
+    <div class="card">
+        <h2 class="form-title">
+            {% if is_update %}Editing: {{ student.name }} ({{ student.student_id }})
+            {% else %}Student Registration ({{ current_term }})
+            {% endif %}
+        </h2>
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            {% for hidden in form.hidden_fields %}
+                {{ hidden }}
+            {% endfor %}
+
+            <div class="form-grid">
+                {% if form.campus.is_hidden == False %}
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label style="font-weight: bold; color: var(--primary);">Assign Campus</label>
+                        {{ form.campus }}
+                        {% for error in form.campus.errors %}
+                            <span style="color: red; font-size: 0.85rem;">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% if is_update %}
+                    <div class="form-group">
+                        <label>{{ form.status.label }}</label>
+                        {{ form.status }}
+                        {% for error in form.status.errors %}
+                            <span style="color: red; font-size: 0.85rem;">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <div class="form-group">
+                    <label>Full Name</label>
+                    {{ form.name }}
+                </div>
+                <div class="form-group">
+                    <label>Date of Birth</label>
+                    {{ form.date_of_birth }}
+                </div>
+                <div class="form-group">
+                    <label>Gender</label>
+                    {{ form.gender }}
+                </div>
+                <div class="form-group">
+                    <label>Select Admission Grade</label>
+                    <select name="grade" id="id_grade" required class="form-control">
+                        <option value="">---------</option>
+                        {% for rule in term_fees %}
+                            <option value="{{ rule.grade.id }}" 
+                                    data-fee="{{ rule.amount }}"
+                                    {% if student and student.grade.id == rule.grade.id %}selected{% endif %}>
+                                {{ rule.grade.title }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Grade Tuition Fee ({{ currency|default:'' }})</label>
+                    <input type="text" id="projected_fee" readonly placeholder="Select grade to see fee..." style="background-color: #e9ecef; font-weight: bold; color: #495057;">
+                </div>
+            </div>
+
+            <h3 class="form-title" style="font-size:1.3rem; margin-top:30px; border-top: 1px solid #e2e8f0; padding-top: 20px;">运输 🚌 Logistics & Auxiliary Options</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>{{ form.needs_transport.label }}</label>
+                    {{ form.needs_transport }}
+                </div>
+                
+                <div class="form-group" id="transport_route_wrapper">
+                    <label>{{ form.transport_route.label }}</label>
+                    {{ form.transport_route }}
+                </div>
+
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label style="font-weight: 600; display: block; margin-bottom: 8px;">{{ form.extra_items.label }}</label>
+                    <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 15px; border-radius: 6px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;">
+                        {% for checkbox in form.extra_items %}
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                {{ checkbox.tag }}
+                                <label for="{{ checkbox.id_for_label }}" style="font-weight: 500; font-size: 0.9rem; cursor: pointer; color: #334155;">
+                                    {{ checkbox.choice_label }}
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <h3 class="form-title" style="font-size:1.3rem; margin-top:30px; border-top: 1px solid #e2e8f0; padding-top: 20px;">🎓 Financial Sponsorship & Scholarships</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Apply for Scholarship?</label>
+                    {{ form.apply_for_scholarship }}
+                </div>
+                
+                <div class="form-group" id="scholarship_amount_wrapper">
+                    <label>Proposed Termly Scholarship Amount ({{ currency|default:'' }})</label>
+                    {{ form.proposed_scholarship_amount }}
+                    <small style="color: #64748b; display: block; margin-top: 4px;">This requested waiver must be reviewed and approved by management before processing invoices.</small>
+                </div>
+            </div>
+
+            <h3 class="form-title" style="font-size:1.3rem; margin-top:30px; border-top: 1px solid #e2e8f0; padding-top: 20px;">Parent/Guardian Contact Details</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Parent/Guardian Name</label>
+                    {{ form.parent_name }}
+                </div>
+                <div class="form-group">
+                    <label>Phone Number 1</label>
+                    {{ form.phone_number_1 }}
+                </div>
+                <div class="form-group">
+                    <label>Phone Number 2</label>
+                    {{ form.phone_number_2 }}
+                </div>
+                <div class="form-group">
+                    <label>Address</label>
+                    {{ form.address }}
+                </div>
+                <div class="form-group">
+                    <label>City Name</label>
+                    {{ form.city }}
+                </div>
+                <div class="form-group">
+                    <label>Country Name</label>
+                    {{ form.country }}
+                </div>
+                <div class="form-group">
+                    <label>Profile Picture</label>
+                    {{ form.profile_picture }}
+                </div>
+            </div>
+
+            <div class="form-card-section" style="margin-top: 30px; padding: 20px; background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <h5 style="margin-bottom: 12px; color: #1e293b; font-weight: 600;">
+                    {{ form.image_use_consent.label }} <span style="color: #ef4444;">*</span>
+                </h5>
+                
+                <div class="radio-options-wrapper" style="display: flex; flex-direction: column; gap: 12px;">
+                    {% for radio in form.image_use_consent %}
+                        <div class="radio-item" style="display: flex; align-items: flex-start; gap: 10px;">
+                            <span style="margin-top: 3px;">{{ radio.tag }}</span>
+                            <label for="{{ radio.id_for_label }}" style="font-size: 0.9rem; color: #334155; font-weight: 500; cursor: pointer; line-height: 1.4;">
+                                {{ radio.choice_label }}
+                            </label>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                {% if form.image_use_consent.errors %}
+                    <div style="color: #ef4444; font-size: 0.85rem; margin-top: 8px; font-weight: 500;">
+                        ✕ Please select one of the consent options above to proceed.
+                    </div>
+                {% endif %}
+            </div>
+
+            <div style="margin-top: 30px; padding: 15px; background-color: #f1f5f9; border-radius: 8px; border: 1px solid #cbd5e1;">
+                <div class="btn-group">
+                    {% if is_update %}                    
+                    <button type="submit" class="btn btn-secondary">Save Changes</button>
+                    <a href="{% url 'student_detail' student.student_id %}" class="btn btn-quart">Cancel</a>                    
+                    {% else %}
+                    <button type="submit" class="btn btn-primary">Register Student</button>
+                    <a href="{% url 'student_list' %}" class="btn btn-quart">Cancel</a>
+                    {% endif %}
+                </div>
+                <span style="display: block; margin-top: 12px; color: #64748b; font-size: 0.85rem;">
+                    By clicking "Register Student", you confirm that all information provided is accurate.
+                </span>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // --- 1. Tuition Fee Estimation System ---
+    const gradeSelect = document.getElementById('id_grade');
+    const projectedFeeInput = document.getElementById('projected_fee');
+    const currentCurrency = "{{ currency|default:'' }}";
+    
+    const feeLookup = {
+        /* {% for rule in term_fees %} */
+            "{{ rule.grade.id }}": "{{ rule.amount }}",
+        /* {% endfor %} */
+    };
+
+    if (gradeSelect && projectedFeeInput) {
+        function checkGradeAndEstimateFee() {
+            const selectedGradeId = gradeSelect.value;
+            const fee = feeLookup[selectedGradeId];
+            
+            if (fee) {
+                projectedFeeInput.value = `${currentCurrency} ${parseFloat(fee).toFixed(2)}`.trim();
+            } else {
+                projectedFeeInput.value = '';
+            }
+        }
+        checkGradeAndEstimateFee();
+        gradeSelect.addEventListener('change', checkGradeAndEstimateFee);
+    }
+
+    // --- 2. Dynamic UI Transport Route Conditional Toggle ---
+    const transportSelect = document.querySelector("[name='needs_transport']");
+    const routeWrapper = document.getElementById('transport_route_wrapper');
+
+    if (transportSelect && routeWrapper) {
+        function checkTransportState() {
+            if (transportSelect.value === "true" || transportSelect.value === "True") {
+                routeWrapper.style.display = "block";
+            } else {
+                routeWrapper.style.display = "none";
+                const routeInput = document.querySelector("[name='transport_route']");
+                if (routeInput) routeInput.value = ""; 
+            }
+        }
+        transportSelect.addEventListener('change', checkTransportState);
+        checkTransportState(); 
+    }
+
+    // --- 3. Dynamic UI Scholarship Toggle ---
+    const scholarshipToggle = document.getElementById("id_apply_for_scholarship");
+    const amountWrapper = document.getElementById("scholarship_amount_wrapper");
+    const amountField = document.getElementById("id_proposed_scholarship_amount");
+
+    if (scholarshipToggle && amountWrapper && amountField) {
+        function toggleScholarshipVisibility() {
+            if (scholarshipToggle.value === "True") {
+                amountWrapper.style.display = "block";
+                amountField.required = true;
+            } else {
+                amountWrapper.style.display = "none";
+                amountField.required = false;
+                // Optional baseline: set value back to 0 if they uncheck it
+                if (scholarshipToggle.value === "True") {
+                    amountWrapper.style.display = "block";
+                    amountField.required = true; 
+                } 
+                else {
+                    amountWrapper.style.display = "none";
+                    amountField.required = false;
+                    
+                    // Clear the field out cleanly if it's turned off
+                    amountField.value = "0.00";
+                }
+            }
+        }
+        scholarshipToggle.addEventListener("change", toggleScholarshipVisibility);
+        toggleScholarshipVisibility();
+    }
+});
+</script>
+{% endblock %}

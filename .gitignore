@@ -1,0 +1,13 @@
+mylonvenv/
+__pycache__/
+*.pyc
+*.pyo
+_init__.py 
+media/
+staticfiles/
+db.sqlite3
+*.log   
+.env
+*.env
+*.DS_Store
+.vscode/

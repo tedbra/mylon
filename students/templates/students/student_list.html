@@ -1,0 +1,216 @@
+{% extends "students/base.html" %}
+{% load static %}
+
+{% block content %}
+
+<div class="container" style="margin-top: 30px;">
+    <div class="btn-group" style="justify-content: space-between; align-items: center;">
+            <h1 style="font-family: 'Playfair Display'; color: var(--dark);">Student List</h1>
+            <div>
+                <a href="{% url 'student_create' %}" class="btn btn-primary">+ Register New Student</a>
+                <a href="{% url 'revenue_dashboard' %}" class="btn btn-tertiary">🚀 Revenue Dashboard</a>
+                <a href="{% url 'expense_report' %}" class="btn btn-hex">📈 Expenses</a>
+            </div>
+            <div>
+                <label for="nameSearch">🔍 Search Student Name or ID:</label>
+                <input type="text" id="nameSearch" placeholder="Type a name to search..." style="padding: 8px 15px; width:250px; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+            <a href="{% url 'export_students_excel' %}" id="exportFilteredExcel" class="btn" style="background-color: #16a34a; color: white; border-radius: 4px; padding: 12px 16px; font-weight: 600; text-decoration: none;">
+                    📥 Export Filtered List
+            </a>
+    </div>
+
+    <div class="filter-bar" style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+        <div>
+            <label for="gradeFilter">🎯 Filter By Grade Selection:</label>
+            <select id="gradeFilter" style="padding: 8px 15px; width:250px;">
+                <option value="all">-- Show All Registered Classes --</option>
+                {% for grade in grades %}
+                    <option value="{{ grade.title }}">{{ grade.title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label for="balanceFilter">💰 Filter Balance Status:</label>
+            <select id="balanceFilter" style="padding: 8px 15px; width:250px;">
+                <option value="all">-- Show All Balances --</option>
+                <option value="owes">Owes Fees (Outstanding)</option>
+                <option value="cleared">Cleared (Fully Paid)</option>
+            </select>
+        </div>
+
+        <div>
+            <label for="transportFilter">🚌 Filter Transport:</label>
+            <select id="transportFilter" style="padding: 8px 15px; width:250px;">
+                <option value="all">-- Show All Transport Statuses--</option>
+                <option value="need_transport">Uses Transport</option>
+                <option value="no_transport">No transport</option>
+            </select>
+        </div>
+        
+        <div>
+            <label for="consentFilter">📷 Filter By Media Rights:</label>
+            <select id="consentFilter" style="padding: 8px 15px; width:250px;">
+                <option value="all">-- Show All Media Profiles --</option>
+                <option value="allowed">Allowed (Social Media OK)</option>
+                <option value="restricted">⚠️ Restricted (No Social Media)</option>
+            </select>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Full Name</th>
+                    <th>Grade Allocation</th>
+                    <th>Total Owing</th>
+                    <th>Paid</th>
+                    <th>Remaining Balance</th>
+                    <th>Contact</th>
+                    <th>Transport</th>
+                    <th>Media Rights</th> 
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students %}
+                <tr class="student-row" 
+                    data-grade="{{ student.grade.title }}" 
+                    data-consent="{% if student.image_use_consent %}allowed{% else %}restricted{% endif %}"
+                    data-transport="{% if student.needs_transport %}need_transport{% else %}no_transport{% endif %}"
+                    data-balance="{{ student.current_term_outstanding_balance }}">
+                    
+                    <td><a href="{% url 'student_detail' student.student_id %}" style="color:var(--primary); font-weight:700;">{{ student.student_id }}</a></td>
+                    <td><strong>{{ student.name }}</strong></td>
+                    <td>{{ student.grade.title }}</td>
+                    <td>{{currency}} {{ student.current_term_total_due|floatformat:2 }}</td>
+                    <td style="color:var(--success); font-weight:600;">{{currency}} {{ student.current_term_paid|floatformat:2 }}</td>
+                    <td style="color:var(--red); font-weight:600;">{{currency}} {{ student.current_term_outstanding_balance|floatformat:2}}</td>
+                    <td>{{ student.phone_number_1 }}</td>
+                    <td>
+                        {% if student.needs_transport %}
+                            <span class="badge badge-active">🚌</span>
+                        {% else %}
+                            <span class="badge badge-inactive">❌</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if student.image_use_consent %}
+                            <span class="badge" style="background-color: #dcfce7; color: #16a34a; font-weight: 600; padding: 4px 8px; border-radius: 4px;">
+                                ✓ Media OK
+                            </span>
+                        {% else %}
+                            <span class="badge" style="background-color: #fee2e2; color: #dc2626; font-weight: 700; padding: 4px 8px; border-radius: 4px; border: 1px solid #fca5a5;">
+                                ⚠️ Restricted
+                            </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" style="text-align: center; color:var(--muted);">No student profiles indexed to current records.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const nameSearch = document.getElementById("nameSearch");
+    const gradeFilter = document.getElementById("gradeFilter");
+    const consentFilter = document.getElementById("consentFilter");
+    const transportFilter = document.getElementById("transportFilter");
+    const balanceFilter = document.getElementById("balanceFilter");
+
+    const rows = document.querySelectorAll(".student-row");
+
+    function applyFilters() {
+        const searchQuery = nameSearch ? nameSearch.value.toLowerCase().trim() : "";
+        const selectedGrade = gradeFilter ? gradeFilter.value : "all";
+        const selectedConsent = consentFilter ? consentFilter.value : "all";
+        const selectedTransport = transportFilter ? transportFilter.value : "all";
+        const selectedBalance = balanceFilter ? balanceFilter.value : "all";
+
+        rows.forEach(row => {
+            const rowGrade = row.getAttribute("data-grade");
+            const rowConsent = row.getAttribute("data-consent");
+            const rowTransport = row.getAttribute("data-transport");
+            // Parse balance attribute as a float number
+            const rowBalance = parseFloat(row.getAttribute("data-balance")) || 0;
+            // 🎯 1. Extract Name Text (2nd column / index 1)
+            const nameCell = row.getElementsByTagName("td")[1];
+            const studentName = nameCell ? nameCell.textContent.toLowerCase() : "";
+            // 🎯 2. Extract Student ID Text (1st column / index 0)
+            const idCell = row.getElementsByTagName("td")[0];
+            const studentId = idCell ? idCell.textContent.toLowerCase() : "";
+
+            // 🎯 3. Multi-match logic: Look inside BOTH the name string OR the ID string
+            const matchesSearch = searchQuery === "" || 
+                                  studentName.includes(searchQuery) || 
+                                  studentId.includes(searchQuery);
+
+            const matchesGrade = selectedGrade === "all" || rowGrade === selectedGrade;
+            const matchesConsent = selectedConsent === "all" || rowConsent === selectedConsent;
+            const matchesTransport = selectedTransport === "all" || rowTransport === selectedTransport;
+            // 🎯 Balance evaluation logic
+            let matchesBalance = true;
+            if (selectedBalance === "owes") {
+                matchesBalance = rowBalance > 0;
+            } else if (selectedBalance === "cleared") {
+                matchesBalance = rowBalance === 0;
+            }
+
+            if (matchesSearch && matchesGrade && matchesConsent && matchesTransport && matchesBalance) {
+                row.style.display = ""; 
+            } else {
+                row.style.display = "none"; 
+            }
+        });
+    }
+
+    if (nameSearch) nameSearch.addEventListener("input", applyFilters);
+    if (gradeFilter) gradeFilter.addEventListener("change", applyFilters);
+    if (consentFilter) consentFilter.addEventListener("change", applyFilters);
+    if (transportFilter) transportFilter.addEventListener("change", applyFilters);
+    if (balanceFilter) balanceFilter.addEventListener("change", applyFilters);
+});
+
+document.addEventListener("DOMContentLoaded", function() {
+    const exportButton = document.getElementById("exportFilteredExcel");
+    if (exportButton) {
+        exportButton.addEventListener("click", function(e) {
+            e.preventDefault();
+
+            const visibleIds = [];
+            const rows = document.querySelectorAll(".student-row");
+
+            // Loop through all table rows and collect IDs of visible ones
+            rows.forEach(row => {
+                if (row.style.display !== "none") {
+                    const idCell = row.getElementsByTagName("td")[0];
+                    if (idCell) {
+                        visibleIds.push(idCell.textContent.trim());
+                    }
+                }
+            });
+
+            if (visibleIds.length === 0) {
+                alert("No students match your current filters to export.");
+                return;
+            }
+
+            // Django will now execute this tag cleanly since it's inside an HTML view template!
+            const baseUrl = "{% url 'export_students_excel' %}";
+            const exportUrl = `${baseUrl}?student_ids=${visibleIds.join(",")}`;
+
+            window.location.href = exportUrl;
+        });
+    }
+});
+
+</script>
+
+{% endblock %}

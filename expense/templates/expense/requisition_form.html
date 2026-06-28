@@ -1,0 +1,239 @@
+{% extends "students/base.html" %}
+{% block content %}
+<div class="container" style="max-width: 1000px; margin: 40px auto; padding: 20px;">
+    
+    <div style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1 style="font-family: 'Playfair Display'; color: var(--dark); margin: 0;">Weekly Budget Requisition</h1>
+            <p style="color: var(--muted); margin: 5px 0 0 0;">Apply for operational funds one week in advance.</p>
+        </div>
+        <a href="{% url 'expense_report' %}" class="btn btn-tertiary">← Back to Expense Log</a>
+    </div>
+
+    {% if form.errors or formset.errors %}
+    <div style="background: #fee2e2; border: 1px solid #fca5a5; color: #dc2626; padding: 15px; border-radius: 6px; margin-bottom: 25px;">
+        <strong>Validation Error:</strong> Please review the form fields below. Make sure all items have a valid name, category, quantity, and price.
+        {{ form.non_field_errors }}
+        {{ formset.non_field_errors }}
+    </div>
+    {% endif %}
+
+    <form method="post" id="requisition-form" style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+        {% csrf_token %}
+        
+        <div style="background: #f8fafc; padding: 20px; border-radius: 6px; margin-bottom: 30px; border: 1px solid #e2e8f0; display: flex; gap: 20px; flex-wrap: wrap;">
+            {% if form.campus %}
+            <div>
+                <label style="font-weight: 700; color: #334155; display: block; margin-bottom: 8px;">🏢 Select Operational Target Campus Branch:</label>
+                {{ form.campus }}
+                {% if form.campus.errors %}
+                    <span style="color: red; font-size: 0.85rem;">{{ form.campus.errors.as_text }}</span>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <div>
+                <label style="font-weight: 700; color: #334155; display: block; margin-bottom: 8px;">🎯 Budget Calendar Week Allocation (Monday Start):</label>
+                {{ form.calendar_week }}
+                {% if form.calendar_week.errors %}
+                    <span style="color: red; font-size: 0.85rem;">{{ form.calendar_week.errors.as_text }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <h3 style="font-family: 'Playfair Display'; margin-bottom: 15px; color: var(--dark);">Requisition Expenditure Line Items</h3>
+        
+        {{ formset.management_form }}
+        
+        <div class="table-responsive">
+            <table class="data-table" id="items-table">
+                <thead>
+                    <tr>
+                        <th>Expense Item Details</th>
+                        <th>Category</th>
+                        <th>Quantity</th>
+                        <th>Unit Price</th>
+                        <th>Cost</th>
+                        <th>Delete</th>
+                    </tr>
+                </thead>
+                <tbody id="formset-container">
+                    {% for item_form in formset %}
+                    <tr class="formset-row" style="border-bottom: 1px solid #e2e8f0;">
+                        <td style="padding: 10px;">
+                            {% for hidden in item_form.hidden_fields %}
+                                {{ hidden }}
+                            {% endfor %}
+                            
+                            {{ item_form.expense_name }}
+                            {% if item_form.expense_name.errors %}
+                                <div style="color: red; font-size: 0.75rem;">{{ item_form.expense_name.errors.as_text }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ item_form.category }}
+                            {% if item_form.category.errors %}
+                                <div style="color: red; font-size: 0.75rem;">{{ item_form.category.errors.as_text }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ item_form.quantity }}
+                            {% if item_form.quantity.errors %}
+                                <div style="color: red; font-size: 0.75rem;">{{ item_form.quantity.errors.as_text }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ item_form.price_per_unit }}
+                            {% if item_form.price_per_unit.errors %}
+                                <div style="color: red; font-size: 0.75rem;">{{ item_form.price_per_unit.errors.as_text }}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ item_form.cost_price }}                          
+                        </td>
+                        <td>
+                            {% if formset.can_delete %}
+                                {{ item_form.DELETE }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
+            <button type="button" id="add-item-btn" class="btn btn-tertiary" style="background: #e2e8f0; color: #1e293b; border: none; font-weight: 600; padding: 10px 15px; border-radius: 4px; cursor: pointer;">
+                ➕ Add Another Line Item
+            </button>
+            <div style="font-size: 1.2rem; font-weight: 700; color: var(--dark);">
+                Estimated Total: <span style="color: var(--primary);" id="running-total"> 0.00</span>
+            </div>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+
+        <div style="text-align: right;">
+            <button type="submit" class="btn btn-primary" style="padding: 12px 30px; font-size: 1rem; cursor: pointer;">
+                Submit Requisition Sheet for Approval
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const addButton = document.getElementById('add-item-btn');
+    const container = document.getElementById('formset-container');
+    
+    // Look up management form total counter field dynamically
+    const totalForms = document.querySelector('input[name="items-TOTAL_FORMS"]') || document.getElementById('id_items-TOTAL_FORMS');
+    
+    const styleFields = () => {
+        document.querySelectorAll('#items-table input, #items-table select').forEach(el => {
+            if(el.type !== 'checkbox') {
+                el.style.width = "100%";
+                el.style.padding = "8px 10px";
+                el.style.border = "1px solid #cbd5e1";
+                el.style.borderRadius = "4px";
+                el.style.boxSizing = "border-box";
+            }
+        });
+    };
+    
+    // Initial Setup
+    styleFields();
+    calculateTotals(); // 🎯 Renamed from calculateRunningTotal to represent both calculations
+
+    // 1. Add Row Mechanic
+    addButton.addEventListener('click', function() {
+        if (!totalForms) {
+            console.error("Django Management Form field 'TOTAL_FORMS' is missing!");
+            return;
+        }
+
+        const currentFormCount = parseInt(totalForms.value);
+        const rows = document.getElementsByClassName('formset-row');
+        
+        if (rows.length === 0) return;
+        
+        const templateRow = rows[0]; 
+        const newRow = templateRow.cloneNode(true);
+        
+        // Update form sequence indices cleanly using regex matching strings
+        newRow.innerHTML = newRow.innerHTML.replace(/items-\d-/g, `items-${currentFormCount}-`);
+        newRow.innerHTML = newRow.innerHTML.replace(/id_items-\d-/g, `id_items-${currentFormCount}-`);
+        
+        // Clean dynamic value attributes on clone
+        newRow.querySelectorAll('input').forEach(input => {
+            if(input.type !== 'checkbox') {
+                input.value = '';
+            } else {
+                input.checked = false;
+            }
+        });
+
+        // Ensure drop-down fields reset cleanly
+        newRow.querySelectorAll('select').forEach(select => {
+            select.selectedIndex = 0;
+        });
+
+        // Clear out old validation text blocks if the first row had errors
+        newRow.querySelectorAll('div[style*="color: red"]').forEach(div => div.remove());
+        
+        container.appendChild(newRow);
+        
+        // Update the management form count so Django accepts the payload
+        totalForms.value = currentFormCount + 1;
+        
+        styleFields();
+        calculateTotals();
+    });
+
+    // 2. 🎯 Single-Pass Row Cost & Running Total Calculation Pipeline
+    function calculateTotals() {
+        let grandTotal = 0;
+        
+        document.querySelectorAll('.formset-row').forEach(row => {
+            const qtyEl = row.querySelector('.item-qty');
+            const priceEl = row.querySelector('.item-price');
+            const costEl = row.querySelector('.item-cost'); // 🎯 Targeted row cost cell
+            const deleteCheck = row.querySelector('input[type="checkbox"][name$="-DELETE"]');
+            
+            let rowCost = 0;
+
+            if (qtyEl && priceEl) {
+                const qty = parseFloat(qtyEl.value) || 0;
+                const price = parseFloat(priceEl.value) || 0;
+                rowCost = qty * price;
+
+                // If row is marked for deletion, count its costs as 0 for the grand total
+                if (!(deleteCheck && deleteCheck.checked)) {
+                    grandTotal += rowCost;
+                }
+            }
+
+            // 🎯 Update the row subtotal display instantly
+            if (costEl) {
+                const formattedCost = rowCost.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+                
+                if (costEl.tagName === 'INPUT') {
+                    costEl.value = formattedCost;
+                } else {
+                    costEl.innerText = formattedCost;
+                }
+            }
+        });
+
+        // Update Grand Running Total
+        const totalDisplay = document.getElementById('running-total');
+        if (totalDisplay) {
+            totalDisplay.innerText = " " + grandTotal.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+        }
+    }
+
+    container.addEventListener('input', calculateTotals);
+    container.addEventListener('change', calculateTotals);
+});
+</script>
+{% endblock %}

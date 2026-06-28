@@ -1,0 +1,119 @@
+{% extends "students/base.html" %}
+{% block content %}
+<div class="container" style="margin-top: 30px;">
+    <div style="margin-bottom: 25px;">
+        <h1 style="font-family: 'Playfair Display'; color: #1e293b; margin-bottom: 5px;">Scholarship Management Registry</h1>
+        <p style="color: #64748b; margin-top: 0;">Overview of pending applications, active awards, and rejections.</p>
+    </div>
+    <div>
+        <a href="{% url 'student_list' %}" class="btn btn-secondary">📋 Student List</a>
+        <a href="{% url 'revenue_dashboard' %}" class="btn btn-tertiary">🚀 Revenue Dashboard</a>
+        <a href="{% url 'expense_report' %}" class="btn btn-hex">📈 Expenses</a>
+        <a href="{% url 'global_analytics_dashboard' %}" class="btn btn-quint">📊 Analytics</a>            
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div style="padding: 12px 20px; margin-bottom: 20px; border-radius: 6px; font-weight: 500; 
+                {% if 'success' in message.tags %} background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;
+                {% elif 'error' in message.tags %} background-color: #fef2f2; color: #991b1b; border: 1px solid #fca5a5;
+                {% else %} background-color: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; {% endif %}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="table-responsive">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem;">
+            <thead>
+                <tr style="background-color: #f8fafc; border-bottom: 1px solid #e2e8f0; color: #475569; font-weight: 600;">
+                    <th style="padding: 14px 16px;">Campus & Grade</th>
+                    <th style="padding: 14px 16px;">Student details</th>
+                    <th style="padding: 14px 16px;">Parent / Contact</th>
+                    <th style="padding: 14px 16px; text-align: center;">Current Status</th>
+                    <th style="padding: 14px 16px; text-align: right;">Amount Tracked</th>
+                    <th style="padding: 14px 16px; text-align: center;">Available Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in scholarships %}
+                    <tr style="border-bottom: 1px solid #f1f5f9; color: #334155;">
+                        <td style="padding: 14px 16px;">
+                            <span style="display: block; font-weight: 600; color: #0f172a;">{{ student.campus.name }}</span>
+                            <span style="font-size: 0.85rem; color: #64748b;">{{ student.grade.title }}</span>
+                        </td>
+                        <td style="padding: 14px 16px; font-weight: 500;">
+                            {{ student.name }} <br>
+                            <small style="color: #94a3b8; font-family: monospace;">{{ student.student_id }}</small>
+                        </td>
+                        <td style="padding: 14px 16px;">
+                            <span style="display: block; font-weight: 500;">{{ student.parent_name }}</span>
+                            <span style="font-size: 0.85rem; color: #64748b;">📞 {{ student.phone_number_1 }}</span>
+                        </td>
+                        <td style="padding: 14px 16px; text-align: center;">
+                            {% if student.scholarship_status == 'PENDING' %}
+                                <span style="background-color: #fef9c3; color: #713f12; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; border: 1px solid #fef08a;">Pending Review</span>
+                            {% elif student.scholarship_status == 'APPROVED' %}
+                                <span style="background-color: #dcfce7; color: #14532d; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; border: 1px solid #bbf7d0;">Active / Approved</span>
+                            {% elif student.scholarship_status == 'REJECTED' %}
+                                <span style="background-color: #fee2e2; color: #7f1d1d; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; border: 1px solid #fca5a5;">Rejected</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 14px 16px; text-align: right; font-weight: bold;">
+                            {% if student.scholarship_status == 'APPROVED' %}
+                                <span style="color: #16a34a;">{{ student.scholarship_amount }}</span>
+                            {% else %}
+                                <span style="color: #0284c7;">{{ student.proposed_scholarship_amount }}</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 14px 16px; text-align: center;">
+                            <div style="display: flex; gap: 8px; justify-content: center;">
+                                
+                                {% if student.scholarship_status == 'PENDING' %}
+                                    <form method="POST" style="margin: 0;" onsubmit="return confirm('Authorize this scholarship allocation amount?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="student_id" value="{{ student.id }}">
+                                        <input type="hidden" name="action" value="approve">
+                                        <button type="submit" style="background-color: #16a34a; color: white; border: none; padding: 6px 14px; border-radius: 4px; font-weight: 500; cursor: pointer; font-size: 0.85rem;">
+                                            ✓ Approve
+                                        </button>
+                                    </form>
+
+                                    <form method="POST" style="margin: 0;" onsubmit="return confirm('Deny this scholarship application?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="student_id" value="{{ student.id }}">
+                                        <input type="hidden" name="action" value="reject">
+                                        <button type="submit" style="background-color: #dc2626; color: white; border: none; padding: 6px 14px; border-radius: 4px; font-weight: 500; cursor: pointer; font-size: 0.85rem;">
+                                            ✕ Reject
+                                        </button>
+                                    </form>
+                                
+                                {% elif student.scholarship_status == 'APPROVED' %}
+                                    <form method="POST" style="margin: 0;" onsubmit="return confirm('⚠️ CRITICAL WARNING: This will immediately revoke this active sponsorship and return future/re-synced bills to the full tuition rate. Proceed?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="student_id" value="{{ student.id }}">
+                                        <input type="hidden" name="action" value="revoke">
+                                        <button type="submit" style="background-color: #475569; color: white; border: none; padding: 6px 14px; border-radius: 4px; font-weight: 500; cursor: pointer; font-size: 0.85rem;">
+                                            ⊘ Revoke
+                                        </button>
+                                    </form>
+                                    
+                                {% elif student.scholarship_status == 'REJECTED' %}
+                                    <span style="color: #94a3b8; font-size: 0.85rem; font-style: italic;">No actions available</span>
+                                {% endif %}
+
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6" style="padding: 40px; text-align: center; color: #94a3b8; font-size: 1rem;">
+                            🕊️ No scholarship records found in the system registry layout.
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

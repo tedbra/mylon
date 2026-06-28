@@ -1,0 +1,117 @@
+{% extends "students/base.html" %}
+{% block content %}
+<div class="container" style="max-width: 1100px; margin: 40px auto; padding: 20px; font-family: system-ui, sans-serif;">
+
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+        <div>
+            <h2 style="margin: 0; color: #1e293b; font-size: 1.5rem;">Requisition #00{{ requisition.id }}</h2>
+            <p style="margin: 4px 0 0 0; color: #64748b; font-size: 0.9rem;">
+                Status: 
+                <span style="padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 0.8rem;
+                    {% if requisition.status == 'PENDING' %} background: #fef3c7; color: #d97706;
+                    {% elif requisition.status == 'APPROVED' %} background: #dcfce7; color: #16a34a;
+                    {% else %} background: #fee2e2; color: #dc2626; {% endif %}">
+                    {{ requisition.status }}
+                </span>
+                
+                <br>Requested by: {{ requisition.requester_historical_name}}
+            </p>
+        </div>
+
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <a href="{% if is_global_admin %}{% url 'expense_report_admin' %}{% else %}{% url 'expense_report' %}{% endif %}" 
+               style="text-decoration: none; padding: 10px 16px; background: #64748b; color: #ffffff; font-weight: 600; border-radius: 6px; font-size: 0.9rem; transition: background 0.2s;">
+                ⬅️ Back to Logs
+            </a>
+
+            {% if requisition.status == 'PENDING' %}
+                <a href="{% url 'requisition_update' requisition.id %}" 
+                   style="text-decoration: none; padding: 10px 16px; background: #3b82f6; color: #ffffff; font-weight: 600; border-radius: 6px; font-size: 0.9rem; transition: background 0.2s;">
+                    ✏️ Edit
+                </a>
+
+                {% if is_global_admin %}
+                    <form method="post" action="" style="margin: 0; display: inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action_status" value="APPROVED">
+                        <button type="submit" onclick="return confirm('Are you sure you want to approve this budget request?')"
+                                style="cursor: pointer; border: none; padding: 10px 16px; background: #16a34a; color: #ffffff; font-weight: 600; border-radius: 6px; font-size: 0.9rem;">
+                            ✅ Approve
+                        </button>
+                    </form>
+
+                    <form method="post" action="" style="margin: 0; display: inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="action_status" value="REJECTED">
+                        <button type="submit" onclick="return confirm('Are you sure you want to reject this budget request?')"
+                                style="cursor: pointer; border: none; padding: 10px 16px; background: #dc2626; color: #ffffff; font-weight: 600; border-radius: 6px; font-size: 0.9rem;">
+                            ❌ Reject
+                        </button>
+                    </form>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 30px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 11fr)); gap: 20px;">
+        <div>
+            <span style="display: block; font-size: 0.8rem; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Campus Location</span>
+            <strong style="color: #334155; font-size: 1.1rem;">{{ requisition.campus.name }}</strong>
+        </div>
+        <div>
+            <span style="display: block; font-size: 0.8rem; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Allocated Term Block</span>
+            <strong style="color: #334155; font-size: 1.1rem;">{{ requisition.term|default:"Unassigned Calendar Frame" }}</strong>
+        </div>
+        <div>
+            <span style="display: block; font-size: 0.8rem; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Calendar Processing Week</span>
+            <strong style="color: #334155; font-size: 1.1rem;">{{ requisition.calendar_week|date:"F d, Y" }}</strong>
+        </div>
+        <div>
+            <span style="display: block; font-size: 0.8rem; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Creation Date</span>
+            <strong style="color: #334155; font-size: 1.1rem;">{{ requisition.created_at|date:"M d, Y · H:i" }}</strong>
+        </div>
+    </div>
+
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+                <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1; color: #475569; font-size: 0.9rem; font-weight: 700;">
+                    <th style="padding: 15px 20px;">Item Description</th>
+                    <th style="padding: 15px 20px;">Category</th>
+                    <th style="padding: 15px 20px; text-align: center;">Quantity</th>
+                    <th style="padding: 15px 20px; text-align: right;">Unit Price</th>
+                    <th style="padding: 15px 20px; text-align: right;">Calculated Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in item_details %}
+                <tr style="border-bottom: 1px solid #f1f5f9; color: #334155; font-size: 0.95rem; background: {% cycle '#ffffff' '#fbfcfe' %};">
+                    <td style="padding: 15px 20px; font-weight: 600;">{{ row.instance.expense_name }}</td>
+                    <td style="padding: 15px 20px;"><span style="background: #e2e8f0; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 500;">{{ row.instance.category }}</span></td>
+                    <td style="padding: 15px 20px; text-align: center; color: #64748b;">{{ row.instance.quantity }}</td>
+                    <td style="padding: 15px 20px; text-align: right; font-family: monospace;"> {{ row.instance.price_per_unit|floatformat:2 }}</td>
+                    <td style="padding: 15px 20px; text-align: right; font-weight: 700; font-family: monospace; color: #0f172a;">
+                         {{ row.line_total|floatformat:2 }}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="padding: 30px; text-align: center; color: #94a3b8; font-style: italic;">
+                        No item descriptions found on this Requisition sheet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div style="background: #f8fafc; border-top: 2px solid #e2e8f0; padding: 25px 20px; display: flex; justify-content: flex-end;">
+            <div style="text-align: right;">
+                <span style="font-size: 0.85rem; font-weight: 700; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 4px;">Grand Consolidated Total:</span>
+                <span style="font-size: 1.75rem; font-weight: 800; color: #0f172a; font-family: monospace;">
+                     {{ grand_total|floatformat:2 }}
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

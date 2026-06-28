@@ -1,0 +1,105 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admission Sheet - {{ student.student_id }}</title>
+    <link href="{% static 'images/logo.ico' %}" rel="icon">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!--link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet"-->
+    <link rel="stylesheet" href="{% static 'css/forms_dashb.css' %}">
+</head>
+<body>
+    <div class="container">
+        <div class="btn-group">
+            <button onclick="printAdmissionForm()" class="btn btn-primary">🖨️ Print Admission Form</button>
+            <a href="{% url 'process_payment' student.student_id %}" class="btn btn-tertiary">💰 Add New Payment</a>
+            <a href="{% url 'student_update' student.student_id %}" class="btn btn-quart">✏️ Edit Details</a>
+            <a href="{% url 'student_list' %}" class="btn btn-secondary">📋Student List</a>            
+        </div>
+
+        <div class="card">
+            <div class="admission-header">
+                <h1 style="margin-top:5px">Skylon Schools {{ student.campus }}</h1>
+                <p style="margin-top:5px; letter-spacing: 1px; font-size:0.8rem; color:var(--muted)">CULTIVATING EXCELLENCE, ONE STUDENT AT A TIME</p>
+                <h2 style="margin-top:5px;">Student Registration for {{ current_term }}</h2>
+            </div>
+
+            <div class="profile-layout">
+                <div class="photo-side">
+                    <div class="photo-box">
+                        {% if student.profile_picture %}
+                            <img src="{{ student.profile_picture.url }}" alt="Profile Photo">
+                        {% else %}
+                            <span style="color:var(--muted); font-size:0.8rem;">Passport Photo</span>
+                        {% endif %}
+                    </div>
+                    <h4 style="text-align:center; margin-top:15px; color:var(--primary);"><span style="font-weight:600; color:var(--dark);">Student ID:</span> {{ student.student_id }}</h4>
+                    <h4 style="text-align:center; margin-top:15px; color:var(--primary);"><span style="font-weight:600; color:var(--dark);">First Enrolled in </span> {{ student.enrollment_year}}</h4>
+                </div>
+
+                <div class="info-side">
+                    <h3 style="margin-bottom:5px; color:var(--primary);">Student Information</h3>
+                    <div class="info-display-grid">
+                        <div class="info-item"><div class="label">Full Name</div><div class="value">{{ student.name }}</div></div>
+                        <div class="info-item"><div class="label">Date of Birth</div><div class="value">{{ student.date_of_birth }}</div></div>
+                        <div class="info-item"><div class="label">Gender</div><div class="value">{{ student.get_gender_display }}</div></div>
+                        <div class="info-item"><div class="label">Current Status</div><div class="value">{{ student.status }}</div></div>
+                        <div class="info-item"><div class="label">Allocated Grade</div><div class="value">{{ student.grade.title }}</div></div>
+                        <div class="info-item"><div class="label">Date Registered</div><div class="value">{{ student.date_created|date:"Y-m-d" }}</div></div>
+                    </div>
+
+                    <h3 style="margin-bottom:5px; margin-top:5px; color:var(--primary);">Parent Contact & Address Details</h3>
+                    <div class="info-display-grid">
+                        <div class="info-item"><div class="label">Parent / Guardian Name</div><div class="value">{{ student.parent_name }}</div></div>
+                        <div class="info-item"><div class="label">Phone Number 1</div><div class="value">{{ student.phone_number_1 }}</div></div>
+                        <div class="info-item"><div class="label">Phone Number 2</div><div class="value">{{ student.phone_number_2 }}</div></div>
+                        <div class="info-item"><div class="label">Address</div><div class="value">{{ student.address }}</div></div>
+                        <div class="info-item"><div class="label">City</div><div class="value">{{ student.city }}</div></div>
+                        <div class="info-item"><div class="label">Country</div><div class="value">{{ student.country }}</div></div>
+                    </div>                    
+                </div>
+            </div>
+            <hr style="border: none; border-top: 1px solid #ccc; margin: 5px 0;">
+            <div>
+                <h3 style="margin-bottom:5px; margin-top:30px; color:var(--primary);">Financial Overview Statement</h3>
+                <div class="info-display-grid_4">
+                    <div class="info-item"><div class="label">Tuition Fees :</div><div class="value">{{currency}} {{ active_invoice.tuition_amount|floatformat:2 }}</div></div>
+                    <div class="info-item"><div class="label">Transport Fees :</div><div class="value">{{currency}} {{ active_invoice.transport_amount|floatformat:2 }}</div></div>
+                    <div class="info-item"><div class="label">Extras(Dairies, Book Fund etc...) :</div><div class="value">{{currency}} {{ active_invoice.extras_amount|floatformat:2}}</div></div>
+                    <div class="info-item"><div class="label">Arrears :</div><div class="value">{{currency}} {{ student.current_term_arrears|floatformat:2 }}</div></div>
+                    <div class="info-item"><div class="label">Sponsorship :</div><div class="value">{{currency}} {{ student.scholarship_amount|floatformat:2 }}</div></div>
+                    <div class="info-item"><div class="label">Total Fees :</div><div class="value">{{currency}} {{ student.current_term_total_due|floatformat:2 }}</div></div>
+                    <div class="info-item"><div class="label">Fees Cleared :</div><div class="value" style="color:var(--success);">{{currency}} {{ student.current_term_paid|floatformat:2 }}</div></div>
+                    <div class="info-item"><div class="label">Outstanding Balance :</div><div class="value" style="color:var(--red);">{{currency}} {{ student.current_term_outstanding_balance|floatformat:2}}</div></div>
+                </div>
+            </div>
+
+            <div class="declaration-box">
+                <strong>REGISTRATION DECLARATION:</strong> I hereby verify that all information listed within this institution catalog file profiles is true. I agree to abide by the codes, pricing indices, and administrative terms of Skylon Schools.
+            </div>
+
+            <div class="info-tile" style="padding: 12px; background: #ffffff; border-radius: 6px; border: 1px solid #e2e8f0;">
+                <span style="font-size: 0.8rem; color: #64748b; text-transform: uppercase; font-weight: 600; display: block; margin-bottom: 4px;">
+                    Image Use Compliance.
+                </span>
+                {% if student.image_use_consent %}
+                    <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; color: #16a34a; font-weight: 600;">
+                        ● Consent Granted (Media Use OK)
+                    </span>
+                {% else %}
+                    <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.9rem; color: #dc2626; font-weight: 600; background-color: #fef2f2; padding: 2px 8px; border-radius: 4px;">
+                        ⚠️ RESTRICTED
+                    </span>
+                {% endif %}
+            </div>
+
+            <!--div class="signature-row">
+                <div class="sig-line">Parent / Guardian Signature</div>
+                <div class="sig-line">Registrar Officer Validation</div>
+            </div-->
+        </div>
+    </div>
+    <script src="{% static 'js/main.js' %}"></script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+{% extends "students/base.html" %}
+{% block content %}
+<div class="container" style="margin-top: 30px;">
+    
+    <div class="btn-group" style="justify-content: space-between; align-items: center; margin-bottom: 25px;">
+        <div>
+            <h1 style="font-family: 'Playfair Display'; color: var(--dark); margin:0;">Operational Expense</h1>
+            <span style="display: inline-block; background-color: #eff6ff; color: #059b12; font-size: 0.85rem; font-weight: 700; padding: 4px 12px; border-radius: 5px; border: 1px solid #bfdbfe;">
+                Overview for <strong>🏢 {{ user_campus.name }}</strong>
+            </span>
+        </div>
+        <div>
+            <a href="{% url 'revenue_dashboard' %}" class="btn btn-tertiary">🚀 Revenue Dashboard</a>
+            <a href="{% url 'requisition_create' %}" class="btn btn-primary">➕ Create Weekly Requisition</a>
+        </div>        
+    </div>
+
+    <div class="card">
+        <div class="dashboard-grid" style="margin-top: 20px;">
+            <div class="stat-card">
+                <div class="stat-label">Total Budget Requests</div>
+                <div class="stat-value">{{ currency }} {{ total_requested_funds|floatformat:2 }}</div>
+            </div>
+            <div class="stat-card paid-card">
+                <div class="stat-label">Approved & Funded</div>
+                <div class="stat-value">{{ currency }} {{ approved_funds|floatformat:2 }}</div>
+            </div>
+            <div class="stat-card collection-card">
+                <div class="stat-label">Awaiting Verification</div>
+                <div class="stat-value">{{ pending_count }} <span style="font-size: 0.9rem; color: var(--muted);">vouchers</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                    <th>Req ID</th>
+                    {% if is_global_admin %}
+                    <th>Campus Branch</th>
+                    {% endif %}
+                    <th>Target Calendar Week</th>
+                    <th>Requested By</th>
+                    <th>Aggregated Total</th>
+                    <th>Status</th>
+                    <th>Management Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for req in requisitions %}
+                <tr style="border-bottom: 1px solid #e2e8f0; transition: all 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                    <td> <a href="{% url 'requisition_detail' req.id %}" style="padding: 15px; font-weight: 700; color: var(--primary);">#00{{ req.id }}</a></td>
+                    {% if is_global_admin %}
+                    <td style="padding: 15px; font-weight: 200; color: #475569;">🏢 {{ req.campus.name }}</td>
+                    {% endif %}
+                    <td style="padding: 15px; font-weight: 200; color: var(--dark);">Week of {{ req.calendar_week|date:"d M Y" }}</td>
+                    <td style="padding: 15px; color: var(--muted); font-size: 0.9rem;">
+                        <strong>{{ req.requester_historical_name }}</strong><br>
+                        <span style="font-size: 0.75rem;">Filed: {{ req.created_at|date:"d/m/Y H:i" }}</span>
+                    </td>
+                    <td style="padding: 15px; text-align: right; font-weight: 700; color: var(--dark);">
+                        {{ currency }} {{ req.total_cost|floatformat:2 }}
+                    </td>
+                    <td style="padding: 15px; text-align: center;">
+                        {% if req.status == 'PENDING' %}
+                            <span style="background: #fef9c3; color: #854d0e; padding: 4px 10px; border-radius: 4px; font-weight:600; font-size:0.8rem;">Pending Review</span>
+                        {% elif req.status == 'APPROVED' %}
+                            <span style="background: #dcfce7; color: #16a34a; padding: 4px 10px; border-radius: 4px; font-weight:600; font-size:0.8rem;">✓ Approved</span>
+                        {% else %}
+                            <span style="background: #fee2e2; color: #dc2626; padding: 4px 10px; border-radius: 4px; font-weight:600; font-size:0.8rem;">✕ Rejected</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 15px; text-align: center;">
+                        {% if req.status == 'PENDING' %}
+                            <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
+                                {% if is_global_admin %}
+                                    <a href="{% url 'update_requisition_status' req.id 'APPROVED' %}" class="btn btn-primary" style="padding: 5px 12px; font-size: 0.8rem; background: #16a34a;">Approve</a>
+                                    <a href="{% url 'update_requisition_status' req.id 'REJECTED' %}" class="btn" style="padding: 5px 12px; font-size: 0.8rem; background: #dc2626; color: white;">Reject</a>
+                                {% endif %}
+                                
+                                <a href="{% url 'requisition_update' req.id %}" class="btn btn-tertiary" style="padding: 5px 12px; font-size: 0.8rem; background: #f1f5f9; color:#334155; border: 1px solid #cbd5e1;">✏️ Edit</a>
+                            </div>
+                        {% else %}
+                            <span style="color: var(--muted); font-size: 0.85rem;">🔒 Processed</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="{% if is_global_admin %}7{% else %}6{% endif %}" style="text-align: center; padding: 30px; color: var(--muted);">No operational cost vouchers indexed to current records.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,122 @@
+{% extends "students/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container" style="margin-top: 30px;">
+    <!-- Header -->
+    <div class="btn-group" style="justify-content: space-between; align-items: center; margin-bottom: 25px;">
+        <div>
+            <h1 style="font-family: 'Playfair Display'; color: var(--dark); margin-bottom: 5px;">Summary Dashboard</h1>
+            <span style="display: inline-block; background-color: #eff6ff; color: #1d4ed8; font-size: 0.85rem; font-weight: 700; padding: 4px 12px; border-radius: 10px; border: 1px solid #bfdbfe;">
+                🌐 Corporate Director Overview
+            </span>
+        </div>
+        <div>
+            <a href="{% url 'student_list' %}" class="btn btn-secondary">📋 Student List</a>
+            <a href="{% url 'student_create' %}" class="btn btn-primary">+ Register New Student</a>
+            <a href="{% url 'expense_report' %}" class="btn btn-hex">📈 Expenses</a>
+            <a href="{% url 'global_analytics_dashboard' %}" class="btn btn-quint">📊 Analytics</a>            
+        </div>
+    </div>
+
+    <div style="max-width: 1100px; margin: 30px auto; padding: 0 20px; font-family: 'Inter', sans-serif; color: #1e293b;">
+        <div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 25px; display: flex; flex-wrap: wrap; gap: 15px; justify-content: space-between; align-items: center;">
+            <form method="GET" action="{% url 'term_summary_dashboard' %}" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
+        
+                <select name="campus" style="padding: 10px 14px; border-radius: 6px; border: 1px solid #cbd5e1; background: white; font-weight: 500;">
+                    {% for c in all_campuses %}
+                        <option value="{{ c.id }}" {% if c.id == campus.id %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+
+                <select name="term" style="padding: 10px 14px; border-radius: 6px; border: 1px solid #cbd5e1; background: white; font-weight: 500;">
+                    {% for t in all_terms %}
+                        <option value="{{ t.id }}" {% if t.id == term.id %}selected{% endif %}>
+                            {{ t }}  </option>
+                    {% endfor %}
+                </select>
+
+                <button type="submit" style="background: #1e3a8a; color: white; padding: 10px 20px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer;">
+                    🔄 Generate Report
+                </button>
+            </form>
+
+            <a href="{% url 'export_term_summary_excel' %}?campus={{ campus.id }}&term={{ term.id }}" style="background: #16a34a; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
+                📥 Download Excel Summary
+            </a>
+        </div>
+
+        <div style="margin-bottom: 30px;">
+            <h2 style="font-size: 1.6rem; color: #0f172a; margin-bottom: 5px;">Summary Analysis</h2>
+            <p style="color: #64748b; margin: 0;">Location: <strong>{{ campus.name }}</strong> | Academic Timeline: <strong>{{ term }}</strong></p>
+        </div>
+
+        <div class="summary-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+            
+            <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                <div style="background: #1e3a8a; padding: 15px 20px; color: white; font-weight: 700; font-size: 1.05rem;">
+                    📊 Revenue & Ledger Metrics
+                </div>
+                <div style="padding: 20px;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 12px 0; color: #475569;">Active Pupils Registry</td><td style="text-align: right; font-weight: 600;">{{ active_pupils }}</td></tr>
+                        <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 12px 0; color: #475569;">Pupils On Transport</td><td style="text-align: right; font-weight: 600;">{{ on_transport }}</td></tr>
+                        <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 12px 0; color: #475569;">Number of Scholarships</td><td style="text-align: right; font-weight: 600;">{{ scholarship_pupils_count }}</td></tr>
+                        <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 12px 0; color: #475569;">Pure Tuition Fees</td><td style="text-align: right; font-weight: 600;">{{ total_base_fees }}</td></tr>
+                        <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 12px 0; color: #475569;">Carried Over Arrears</td><td style="text-align: right; font-weight: 600; color: #b91c1c;">{{ total_arrears }}</td></tr>                        
+                        <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 12px 0; color: #475569;">Transport Billed Revenue</td><td style="text-align: right; font-weight: 600;">{{ total_revenue_transport }}</td></tr>
+                        <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 12px 0; color: #475569;">Extra Items Billed Revenue</td><td style="text-align: right; font-weight: 600;">{{ total_revenue_extras }}</td></tr>
+                        <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 12px 0; color: #475569;">School Sponsored Scholarships</td><td style="text-align: right; font-weight: 600; color: orange;">{{ total_scholarships_given }}</td></tr>
+                        <tr style="border-bottom: 2px solid #cbd5e1; background: #f8fafc;"><td style="padding: 12px 8px; font-weight: 600;">Grand Obligation Total Due</td><td style="text-align: right; font-weight: 700; padding: 12px 8px;">{{ total_due_grand }}</td></tr>
+                        <tr style="border-bottom: 1px solid #f1f5f9; background: #f0fdf4;"><td style="padding: 12px 8px; color: #166534; font-weight: 600;">Total Revenue (Collected)</td><td style="text-align: right; font-weight: 700; color: #166534; padding: 12px 8px;">{{ total_collected }}</td></tr>
+                        <tr style="background: #fffbeb;"><td style="padding: 12px 8px; font-weight: 600; color: #9a3412;">Collection Efficiency Percentage</td><td style="text-align: right; font-weight: 700; color: #9a3412; padding: 12px 8px;">{{ percentage_collection }}%</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); height: fit-content;">
+                <div style="background: #4A148C; padding: 15px 20px; color: white; font-weight: 700; font-size: 1.05rem;">
+                    💸 Operations & Procurement Expenditures
+                </div>
+                <div style="padding: 20px;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: left; margin-bottom: 20px;">
+                        <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 12px 0; color: #475569;">Number of Requisitions</td><td style="text-align: right; font-weight: 600;">{{ num_requisitions }}</td></tr>
+                        <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 12px 0; color: #475569;">Total Amount Requested</td><td style="text-align: right; font-weight: 600; color: #475569;">{{ total_requested_amt }}</td></tr>
+                        <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 12px 0; color: #475569;">Number of Approved Requisitions</td><td style="text-align: right; font-weight: 600;">{{ num_requisitions_approved }}</td></tr>
+                        <tr style="background: #faf5ff;"><td style="padding: 12px 8px; font-weight: 600; color: #6b21a8;">Total Disbursed (Approved & Funded)</td><td style="text-align: right; font-weight: 700; color: #6b21a8; padding: 12px 8px;">{{ total_approved_funded_amt }}</td></tr>
+                    </table>
+
+                    <h4 style="margin: 20px 0 10px 0; font-size: 0.95rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">Funded Categories Breakdown</h4>
+                    <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                            <thead style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                                <tr><th style="padding: 10px 12px; color: #64748b;">Category Class Title</th><th style="padding: 10px 12px; text-align: right; color: #64748b;">Funded Sum</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for cat in category_breakdown %}
+                                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                                        <td style="padding: 10px 12px; font-weight: 500;">{{ cat.category__title }}</td>
+                                        <td style="padding: 10px 12px; text-align: right; font-weight: 600; color: #4a148c;">{{ cat.total_spent }}</td>
+                                    </tr>
+                                {% empty %}
+                                    <tr><td colspan="2" style="padding: 15px; text-align: center; color: #94a3b8;">No funded allocations present in this selection frame.</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+@media (max-width: 768px) {
+    .summary-grid {
+        grid-template-columns: 1fr !important;
+        gap: 20px !important;
+    }
+}
+</style>
+{% endblock %}

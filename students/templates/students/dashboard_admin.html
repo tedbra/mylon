@@ -1,0 +1,132 @@
+{% extends "students/base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container" style="margin-top: 30px;">
+    <!-- Header -->
+    <div class="btn-group" style="justify-content: space-between; align-items: center; margin-bottom: 25px;">
+        <div>
+            <h1 style="font-family: 'Playfair Display'; color: var(--dark); margin-bottom: 5px;">Executive Dashboard</h1>
+            <span style="display: inline-block; background-color: #eff6ff; color: #1d4ed8; font-size: 0.85rem; font-weight: 700; padding: 4px 12px; border-radius: 5px; border: 1px solid #bfdbfe;">
+                🌐 Corporate Director Overview (All Campuses)
+            </span>
+        </div>
+        <div>
+            <a href="{% url 'student_list' %}" class="btn btn-secondary">📋 Student List</a>
+            <a href="{% url 'student_create' %}" class="btn btn-primary">+ Register New Student</a>
+            <a href="{% url 'expense_report' %}" class="btn btn-hex">📈 Expenses</a>
+            <a href="{% url 'global_analytics_dashboard' %}" class="btn btn-quint">📊 Analytics</a>            
+        </div>
+    </div>
+
+    <!-- GRAND TOTALS MACRO METRICS -->
+    <div class="dashboard-grid" style="margin-bottom: 40px;">
+        <div class="stat-card" style="border-left: 4px solid var(--primary);">
+            <div class="stat-label">Network Total Pupils</div>
+            <div class="stat-value">{{ total_pupils }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Network Expected Fees</div>
+            <div class="stat-value">{{ currency }} {{ total_fees|floatformat:2 }}</div>
+        </div>
+        <div class="stat-card paid-card">
+            <div class="stat-label">Network Total Paid</div>
+            <div class="stat-value" style="color: var(--success);">{{ currency }} {{ total_paid|floatformat:2 }}</div>
+        </div>
+        <div class="stat-card balance-card">
+            <div class="stat-label">Network Total Debt</div>
+            <div class="stat-value" style="color: var(--red);">{{ currency }} {{ total_balance|floatformat:2 }}</div>
+        </div>
+        <div class="stat-card collection-card">
+            <div class="stat-label">Avg Network Collection</div>
+            <div class="stat-value" style="color: var(--gold);">{{ global_percentage }}%</div>
+            <!--div class="progress-container">
+                <div class="progress-bar" style="width: {{ global_percentage }}%;"></div>
+            </div-->
+            <div class="progress-container" style="--progress-width: {{ global_percentage }}%;">
+                <div class="progress-bar" style="width: var(--progress-width);"></div>
+            </div>
+        </div>
+    </div>
+
+    <hr style="border: 0; border-top: 2px dashed #cbd5e1; margin-bottom: 40px;">
+
+    <!-- DYNAMIC PER-CAMPUS BREAKDOWN SECTION -->
+    <h2 style="font-family: 'Playfair Display'; color: var(--dark); margin-bottom: 20px;">Branch Performance Matrix for {{ current_term }}
+        <a href="{% url 'scholarship_review_dashboard' %}" class="btn btn-secondary" style="background-color: #ce1195;">
+        🆓 Scholarships
+    </a>
+    </h2>
+
+    {% for campus in campus_data %}
+        
+        <div class="card" style="margin-bottom: 45px; border-top: 4px solid #6366f1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+            
+            <!-- Campus Summary Banner Headers -->
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                <div>
+                    <h3 style="margin: 0; font-size: 1.6rem; color: #1e1b4b;">📍 Campus: 🏢{{ campus.name }}</h3>
+                    <small style="color: var(--muted);">Active pupils at this location: <strong>{{ campus.campus_count }}</strong></small>
+                </div>
+                
+                <!-- Micro Summary Metrics Panel -->
+                 <div class="table-responsive">
+                    <div class="summary-sub-bar">
+                        <div>Due: <strong>{{ campus.campus_currency }} {{ campus.campus_due|floatformat:2 }}</strong></div>
+                        <div style="color: var(--success);">Paid: <strong>{{ campus.campus_currency }} {{ campus.campus_paid|floatformat:2 }}</strong></div>
+                        <div style="color: var(--red);">Debt: <strong>{{ campus.campus_currency }} {{ campus.campus_balance|floatformat:2 }}</strong></div>
+                        <div style="color: var(--gold);">Collected: <strong>{{ campus.campus_collection_percentage }}%</strong></div>
+                        <div>Billed: <strong>{{ campus.campus_currency }} {{ campus.campus_billed|floatformat:2 }}</strong></div>
+                        <div>Arrears: <strong>{{ campus.campus_currency }} {{ campus.campus_arrears|floatformat:2 }}</strong></div>
+                        <div>Transport: <strong>{{ campus.campus_currency }} {{ campus.campus_transport|floatformat:2 }}</strong></div>
+                        <div>Pupils on Transport: <strong>{{ campus.campus_count_tranport}}</strong></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grade Breakdown for this Campus -->
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Grade Level</th>
+                            <th>Campus Baseline Fee</th>
+                            <th>Pupils Enrolled</th>
+                            <th>Total Due</th>
+                            <th>Total Paid</th>
+                            <th>Balance Debt</th>
+                            <th>Collection Rate</th>
+                            <th>Pupils on Transport</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for grade in campus.grades %}
+                        <tr>
+                            <td><strong>{{ grade.title }}</strong></td>
+                            <td>{{ campus.campus_currency }} {{ grade.fee_per_student|floatformat:2 }}</td>
+                            <td><span class="badge" style="background-color: #eff6ff; color: #1d4ed8; padding: 3px 8px; border-radius: 4px; font-size: 0.85rem;">{{ grade.grade_count }} Pupils</span></td>
+                            <td>{{ campus.campus_currency }} {{ grade.grade_due|floatformat:2 }}</td>
+                            <td style="color: var(--success); font-weight: 600;">{{ campus.campus_currency }} {{ grade.grade_paid|floatformat:2 }}</td>
+                            <td style="color: var(--red); font-weight: 600;">{{ campus.campus_currency }} {{ grade.grade_balance|floatformat:2 }}</td>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <strong style="color: var(--gold); min-width: 40px;">{{ grade.grade_rate }}%</strong>
+                                    <div class="progress-container" style="margin-top: 0; background: #e2e8ef; height: 6px; width: 80px; --progress-width-percentage: {{ grade.grade_collection_percentage }}%;">
+                                        <div class="progress-bar" style="width: var(--progress-width-percentage); background: #6366f1;"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{grade.grade_count_transport}}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" style="text-align: center; color: var(--muted);">No streams calculated for this branch location.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}
